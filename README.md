@@ -20,37 +20,44 @@ cd projects/csc381-site/public && python -m http.server 8080
 ```
 then open http://localhost:8080/ . (Opening `index.html` by double-click also works.)
 
-## Deploy to Cloudflare Pages (first time, ~5 minutes)
+## Where it lives
 
-Option A — drag and drop, no tooling:
-1. Cloudflare dashboard → **Workers & Pages → Create → Pages → Upload assets**.
-2. Project name `csc381` (this gives you `csc381.pages.dev`).
-3. Drag the **`public`** folder in. Done; the `.pages.dev` URL is live immediately.
+| | |
+|---|---|
+| Production | https://markhomepage.com and https://www.markhomepage.com |
+| Fallback | https://csc381.pumpkin-ai-v2.workers.dev |
+| Cloudflare Worker | `csc381` (assets only, no script) |
+| Git | `Kyyota-Wang/cs381`, branch `main` |
+| First deploy | Sep 10, 2026, version `5740ecc0-40ac-4da3-be07-66daa61244bf` |
 
-Option B — command line (repeatable, what you want once it becomes a habit):
+Same pattern as INDHive's `DEPLOY.md`, minus the API: `wrangler.jsonc` points
+`assets.directory` at `public/`, both hostnames are `custom_domain: true` (wrangler
+creates the DNS records and certificate itself), and `workers_dev: true` keeps the
+fallback address alive.
+
+## Deploy
+
+wrangler is already authorised on this machine by OAuth (check with `npx wrangler whoami`;
+re-run `npx wrangler login` if it has lapsed). Then:
+
 ```bash
-npx wrangler login
-npx wrangler pages project create csc381 --production-branch main
-npx wrangler pages deploy public --project-name csc381
+cd projects/csc381-site
+npm install                 # first time only
+npx wrangler deploy
 ```
-Every later update is just the last line again.
 
-## Put it on markhomepage.com
+The output must list all three addresses. If workers.dev is missing, `workers_dev: true`
+has been dropped from `wrangler.jsonc`. Note the `Current Version ID` line; that is the
+rollback point (`npx wrangler rollback <id>`).
 
-`markhomepage.com` currently has no DNS record (the name does not resolve), so
-either of these works:
+Verify:
 
-- **Root domain**: in the Pages project → **Custom domains → Set up a custom domain**
-  → `markhomepage.com`. Cloudflare adds the DNS record itself because the zone is
-  already on Cloudflare. Also add `www.markhomepage.com` if you want that to work.
-- **Subdomain** (if you later want a personal homepage at the root):
-  `csc381.markhomepage.com` the same way. The site uses relative links only, so it
-  works at either address unchanged.
+```bash
+for u in https://markhomepage.com/ https://markhomepage.com/visualization/ https://markhomepage.com/nothing; do curl -s -o /dev/null -w "$u %{http_code}
+" "$u"; done
+```
 
-Module URLs are then `markhomepage.com/` (index) and `markhomepage.com/visualization/`.
-Filters are encoded in the URL hash, so a link like
-`markhomepage.com/visualization/#cls=3&sex=male` opens the dashboard already filtered —
-useful for a slide.
+Expect 200, 200, 404.
 
 ## Adding Module 2, 3, 4
 
