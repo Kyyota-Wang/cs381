@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "csc381",
+  "compatibility_date": "2026-09-01",
+
+  // Static site only: no Worker script, wrangler uploads `public/` as assets
+  // and serves it directly. Same pattern as INDHive minus the API.
+  "assets": {
+    "directory": "./public",
+    "not_found_handling": "404-page"
+  },
+
+  // Keep the workers.dev address alive alongside the custom domain. Declaring
+  // routes turns it off by default; it is the fallback while the certificate
+  // for the custom domain is still being issued.
+  "workers_dev": true,
+
+  // custom_domain: true makes wrangler create the DNS records and certificate
+  // itself, so nothing has to be clicked in the dashboard.
+  "routes": [
+    { "pattern": "markhomepage.com", "custom_domain": true },
+    { "pattern": "www.markhomepage.com", "custom_domain": true }
+  ]
+}

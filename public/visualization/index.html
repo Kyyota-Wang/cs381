@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Titanic Dashboard · CSC 381</title>
+<link rel="stylesheet" href="../assets/site.css">
+<style>
+  .filters { display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: flex-end; margin-bottom: 16px; }
+  .f { display: flex; flex-direction: column; gap: 6px; }
+  .f label, .f .lbl { font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-2); }
+  .chips { display: flex; gap: 6px; }
+  .chip {
+    border: 1px solid var(--border); background: transparent; color: var(--ink); border-radius: 999px;
+    padding: 6px 12px; font: inherit; font-size: 14px; cursor: pointer;
+  }
+  .chip[aria-pressed="true"] { background: var(--chip-on); color: var(--chip-on-ink); border-color: transparent; }
+  .chip:hover { border-color: var(--brand-2); }
+  select, .range { font: inherit; font-size: 14px; color: var(--ink); background: var(--surface);
+    border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; }
+  .range { display: flex; align-items: center; gap: 8px; padding: 4px 10px; }
+  .range input[type=range] { width: 120px; accent-color: var(--brand-2); }
+  .range output { min-width: 2ch; text-align: right; font-variant-numeric: tabular-nums; }
+  .check { display: flex; align-items: center; gap: 8px; font-size: 14px; padding-bottom: 7px; }
+  .check input { accent-color: var(--brand-2); width: 16px; height: 16px; }
+  .reset { border: none; background: transparent; color: var(--brand-2); font: inherit; font-size: 14px;
+    cursor: pointer; text-decoration: underline; padding: 6px 0; }
+  :root[data-theme="dark"] .reset { color: var(--gold); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .reset { color: var(--gold); } }
+
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 4px; }
+  .kpi .k { font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-2); }
+  .kpi .v { font-size: 34px; font-weight: 600; line-height: 1.15; margin: 4px 0 2px; }
+  .kpi .d { font-size: 13px; color: var(--muted); }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  .chart h2 { font-size: 16px; margin: 0 0 2px; }
+  .chart .note { font-size: 13px; color: var(--ink-2); margin: 0 0 6px; min-height: 1.4em; }
+  .plot { width: 100%; height: 300px; }
+  .empty { display: none; height: 300px; align-items: center; justify-content: center; color: var(--muted); font-size: 15px; }
+  .chart.is-empty .plot { display: none; }
+  .chart.is-empty .empty { display: flex; }
+  .corr { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .corr span b { font-weight: 600; }
+  .corr .sw { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+
+  details { margin-top: 18px; }
+  summary { cursor: pointer; color: var(--brand-2); font-size: 14px; }
+  :root[data-theme="dark"] summary { color: var(--gold); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) summary { color: var(--gold); } }
+  .tablewrap { overflow-x: auto; margin-top: 10px; max-height: 420px; overflow-y: auto; }
+  table { border-collapse: collapse; font-size: 13px; width: 100%; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 5px 10px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+  th { color: var(--ink-2); font-weight: 600; position: sticky; top: 0; background: var(--surface); }
+  td.num, th.num { text-align: right; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="crumb"><b>CSC 381 / 576</b> · Module 1 · Visualization</div>
+  <a href="../">← All modules</a>
+</div>
+<main class="wrap">
+  <h1>Titanic passengers</h1>
+  <p class="sub">891 passengers from Kaggle's Titanic <code>train.csv</code>, the same file as the Week 3 notebook.
+    The filters below scope <em>everything</em> on the page, so every number and every chart is describing the same people.</p>
+
+  <section class="card">
+    <div class="filters" id="filters">
+      <div class="f">
+        <span class="lbl" id="lbl-class">Class</span>
+        <div class="chips" role="group" aria-labelledby="lbl-class">
+          <button class="chip" data-class="1" aria-pressed="true">1st</button>
+          <button class="chip" data-class="2" aria-pressed="true">2nd</button>
+          <button class="chip" data-class="3" aria-pressed="true">3rd</button>
+        </div>
+      </div>
+      <div class="f">
+        <label for="sex">Sex</label>
+        <select id="sex">
+          <option value="all">All</option>
+          <option value="female">Female</option>
+          <option value="male">Male</option>
+        </select>
+      </div>
+      <div class="f">
+        <label for="emb">Boarded at</label>
+        <select id="emb">
+          <option value="all">All ports</option>
+          <option value="S">Southampton (S)</option>
+          <option value="C">Cherbourg (C)</option>
+          <option value="Q">Queenstown (Q)</option>
+        </select>
+      </div>
+      <div class="f">
+        <span class="lbl">Age from</span>
+        <div class="range"><input type="range" id="amin" min="0" max="80" value="0" aria-label="Minimum age"><output id="amin-out">0</output></div>
+      </div>
+      <div class="f">
+        <span class="lbl">Age to</span>
+        <div class="range"><input type="range" id="amax" min="0" max="80" value="80" aria-label="Maximum age"><output id="amax-out">80</output></div>
+      </div>
+      <label class="check"><input type="checkbox" id="unk" checked> Keep passengers with unknown age</label>
+      <button class="reset" id="reset">Reset filters</button>
+    </div>
+
+    <div class="kpis">
+      <div class="kpi"><div class="k">Passengers</div><div class="v" id="k-n">—</div><div class="d" id="k-n-d"></div></div>
+      <div class="kpi"><div class="k">Survival rate</div><div class="v" id="k-surv">—</div><div class="d" id="k-surv-d"></div></div>
+      <div class="kpi"><div class="k">Median age</div><div class="v" id="k-age">—</div><div class="d" id="k-age-d"></div></div>
+      <div class="kpi"><div class="k">Median fare</div><div class="v" id="k-fare">—</div><div class="d" id="k-fare-d"></div></div>
+      <div class="kpi"><div class="k">Unknown age</div><div class="v" id="k-unk">—</div><div class="d" id="k-unk-d"></div></div>
+    </div>
+  </section>
+
+  <section class="grid" style="margin-top:16px">
+    <div class="card chart" id="c1">
+      <h2>Survival rate by class and sex</h2>
+      <p class="note" id="c1-note"></p>
+      <div class="plot" id="p1"></div>
+      <div class="empty">No passengers match these filters.</div>
+    </div>
+    <div class="card chart" id="c2">
+      <h2>Age of survivors and victims</h2>
+      <p class="note" id="c2-note"></p>
+      <div class="plot" id="p2"></div>
+      <div class="empty">No passengers with a known age match these filters.</div>
+    </div>
+    <div class="card chart" id="c3">
+      <h2>Fare against age, coloured by class</h2>
+      <p class="note" id="c3-note">Correlation for everyone shown, then within each class.</p>
+      <div class="plot" id="p3"></div>
+      <div class="empty">No passengers with a known age match these filters.</div>
+      <div class="corr" id="corr"></div>
+    </div>
+    <div class="card chart" id="c4">
+      <h2>Fare by class</h2>
+      <p class="note" id="c4-note"></p>
+      <div class="plot" id="p4"></div>
+      <div class="empty">No passengers match these filters.</div>
+    </div>
+  </section>
+
+  <details class="card">
+    <summary id="tbl-sum">Show the rows behind these charts</summary>
+    <div class="tablewrap"><table id="tbl"><thead></thead><tbody></tbody></table></div>
+  </details>
+
+  <p class="footer">Data: Kaggle Titanic competition, <code>train.csv</code> (891 of 1,309 passengers). 177 passengers have no recorded age; they are counted in the passenger totals and survival rate but cannot appear in any chart that uses age. Built for CSC 381/576, West Chester University.</p>
+</main>
+
+<script src="data.js"></script>
+<script src="../assets/plotly.min.js"></script>
+<script>
+(function () {
+  // ---------- data ----------
+  const C = window.TITANIC_COLS, idx = Object.fromEntries(C.map((c, i) => [c, i]));
+  const ROWS = window.TITANIC.map(r => ({
+    id: r[idx.PassengerId], surv: r[idx.Survived], cls: r[idx.Pclass], name: r[idx.Name], sex: r[idx.Sex],
+    age: r[idx.Age], sib: r[idx.SibSp], par: r[idx.Parch], fare: r[idx.Fare], emb: r[idx.Embarked]
+  }));
+  const N_ALL = ROWS.length;
+
+  // ---------- state ----------
+  const DEFAULTS = () => ({ cls: new Set([1, 2, 3]), sex: 'all', emb: 'all', amin: 0, amax: 80, unk: true });
+  const state = DEFAULTS();
+  const $ = id => document.getElementById(id);
+
+  function readHash() {
+    const h = new URLSearchParams(location.hash.slice(1));
+    if (h.has('cls')) state.cls = new Set(h.get('cls').split(',').map(Number).filter(x => [1, 2, 3].includes(x)));
+    if (['all', 'female', 'male'].includes(h.get('sex'))) state.sex = h.get('sex');
+    if (['all', 'S', 'C', 'Q'].includes(h.get('emb'))) state.emb = h.get('emb');
+    if (h.has('amin')) state.amin = Math.min(80, Math.max(0, +h.get('amin') || 0));
+    if (h.has('amax')) state.amax = Math.min(80, Math.max(0, +h.get('amax') || 80));
+    if (h.has('unk')) state.unk = h.get('unk') === '1';
+  }
+  function writeHash() {
+    const p = new URLSearchParams();
+    if (state.cls.size < 3) p.set('cls', [...state.cls].sort().join(','));
+    if (state.sex !== 'all') p.set('sex', state.sex);
+    if (state.emb !== 'all') p.set('emb', state.emb);
+    if (state.amin > 0) p.set('amin', state.amin);
+    if (state.amax < 80) p.set('amax', state.amax);
+    if (!state.unk) p.set('unk', '0');
+    const s = p.toString();
+    history.replaceState(null, '', s ? '#' + s : location.pathname + location.search);
+  }
+  function syncControls() {
+    document.querySelectorAll('.chip[data-class]').forEach(b => b.setAttribute('aria-pressed', state.cls.has(+b.dataset.class)));
+    $('sex').value = state.sex; $('emb').value = state.emb;
+    $('amin').value = state.amin; $('amax').value = state.amax;
+    $('amin-out').value = state.amin; $('amax-out').value = state.amax;
+    $('unk').checked = state.unk;
+  }
+
+  // ---------- filtering + stats ----------
+  function filtered() {
+    return ROWS.filter(r => {
+      if (!state.cls.has(r.cls)) return false;
+      if (state.sex !== 'all' && r.sex !== state.sex) return false;
+      if (state.emb !== 'all' && r.emb !== state.emb) return false;
+      if (r.age == null) return state.unk;
+      return r.age >= state.amin && r.age <= state.amax;
+    });
+  }
+  const mean = a => a.length ? a.reduce((s, x) => s + x, 0) / a.length : NaN;
+  function median(a) {
+    if (!a.length) return NaN;
+    const s = [...a].sort((x, y) => x - y), m = s.length >> 1;
+    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+  }
+  function pearson(xs, ys) {
+    const n = xs.length; if (n < 3) return NaN;
+    const mx = mean(xs), my = mean(ys);
+    let sxy = 0, sxx = 0, syy = 0;
+    for (let i = 0; i < n; i++) { const dx = xs[i] - mx, dy = ys[i] - my; sxy += dx * dy; sxx += dx * dx; syy += dy * dy; }
+    return sxx && syy ? sxy / Math.sqrt(sxx * syy) : NaN;
+  }
+  const pct = x => isNaN(x) ? '—' : Math.round(x * 100) + '%';
+  const fmtR = r => isNaN(r) ? 'n/a' : (r >= 0 ? '+' : '−') + Math.abs(r).toFixed(2);
+  const fmtN = n => n.toLocaleString('en-US');
+
+  // ---------- theme tokens ----------
+  function tok() {
+    const s = getComputedStyle(document.documentElement);
+    const g = k => s.getPropertyValue(k).trim();
+    return {
+      ink: g('--ink'), ink2: g('--ink-2'), muted: g('--muted'), grid: g('--grid'), axis: g('--axis'), surface: g('--surface'),
+      cls: { 1: g('--c1'), 2: g('--c2'), 3: g('--c3') }, sex: { female: g('--sf'), male: g('--sm') }, surv: { 1: g('--sv'), 0: g('--sd') }
+    };
+  }
+  function baseLayout(t, extra) {
+    return Object.assign({
+      paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+      font: { family: 'system-ui, -apple-system, "Segoe UI", sans-serif', size: 13, color: t.ink2 },
+      margin: { t: 8, r: 12, b: 42, l: 52 },
+      legend: { orientation: 'h', x: 0, y: 1.14, font: { color: t.ink } },
+      hoverlabel: { bgcolor: t.surface, bordercolor: t.axis, font: { color: t.ink, size: 13 } },
+      xaxis: { gridcolor: t.grid, zeroline: false, linecolor: t.axis, tickcolor: t.axis },
+      yaxis: { gridcolor: t.grid, zeroline: false, linecolor: t.axis, tickcolor: t.axis }
+    }, extra);
+  }
+  const CFG = { displayModeBar: false, responsive: true };
+  const CLS_NAME = { 1: '1st class', 2: '2nd class', 3: '3rd class' };
+
+  function setEmpty(id, empty) { $(id).classList.toggle('is-empty', empty); }
+
+  // ---------- render ----------
+  function render() {
+    const rows = filtered(), n = rows.length, t = tok();
+    const known = rows.filter(r => r.age != null);
+
+    // KPIs
+    $('k-n').textContent = fmtN(n); $('k-n-d').textContent = 'of ' + fmtN(N_ALL) + ' (' + pct(n / N_ALL) + ')';
+    const sr = mean(rows.map(r => r.surv));
+    $('k-surv').textContent = pct(sr); $('k-surv-d').textContent = n ? fmtN(rows.filter(r => r.surv).length) + ' survived' : '';
+    const ma = median(known.map(r => r.age));
+    $('k-age').textContent = isNaN(ma) ? '—' : ma; $('k-age-d').textContent = known.length ? 'years · ' + fmtN(known.length) + ' with a known age' : '';
+    const mf = median(rows.map(r => r.fare));
+    $('k-fare').textContent = isNaN(mf) ? '—' : '£' + mf.toFixed(0); $('k-fare-d').textContent = n ? 'per ticket, 1912 pounds' : '';
+    const nu = n - known.length;
+    $('k-unk').textContent = fmtN(nu); $('k-unk-d').textContent = n ? pct(nu / n) + ' of those shown' : '';
+
+    // chart 1: survival rate by class x sex
+    setEmpty('c1', n === 0);
+    if (n) {
+      const traces = [];
+      for (const sx of ['female', 'male']) {
+        const xs = [], ys = [], txt = [], hov = [];
+        for (const c of [1, 2, 3]) {
+          const g = rows.filter(r => r.cls === c && r.sex === sx);
+          if (!g.length) continue;
+          const s = g.filter(r => r.surv).length;
+          xs.push(CLS_NAME[c]); ys.push(s / g.length); txt.push(pct(s / g.length));
+          hov.push(s + ' of ' + g.length + ' ' + sx + ' passengers survived');
+        }
+        if (xs.length) traces.push({ type: 'bar', name: sx === 'female' ? 'Female' : 'Male', x: xs, y: ys, text: txt, textposition: 'outside',
+          textfont: { color: t.ink }, marker: { color: t.sex[sx], line: { color: t.surface, width: 2 } },
+          hovertext: hov, hovertemplate: '%{hovertext}<extra></extra>', cliponaxis: false });
+      }
+      $('c1-note').textContent = fmtN(n) + ' passengers. Labels are the share who survived.';
+      Plotly.react('p1', traces, baseLayout(t, { barmode: 'group', bargap: 0.3, bargroupgap: 0.06,
+        xaxis: { gridcolor: 'rgba(0,0,0,0)', categoryorder: 'array', categoryarray: ['1st class', '2nd class', '3rd class'], linecolor: t.axis, tickfont: { color: t.ink } },
+        yaxis: { gridcolor: t.grid, zeroline: false, tickformat: '.0%', range: [0, 1.12], linecolor: t.axis } }), CFG);
+    }
+
+    // chart 2: age histogram, survived vs died
+    setEmpty('c2', known.length === 0);
+    if (known.length) {
+      const traces = [];
+      for (const sv of [1, 0]) {
+        const g = known.filter(r => r.surv === sv);
+        if (!g.length) continue;
+        traces.push({ type: 'histogram', name: sv ? 'Survived' : 'Died', x: g.map(r => r.age), xbins: { start: 0, end: 85, size: 5 },
+          opacity: 0.7, marker: { color: t.surv[sv], line: { color: t.surface, width: 1 } },
+          hovertemplate: 'age %{x}: %{y} ' + (sv ? 'survived' : 'died') + '<extra></extra>' });
+      }
+      $('c2-note').textContent = fmtN(known.length) + ' passengers with a known age, in 5-year bins.' + (nu ? ' ' + fmtN(nu) + ' unknown ages are not drawn.' : '');
+      Plotly.react('p2', traces, baseLayout(t, { barmode: 'overlay', bargap: 0.06,
+        xaxis: { title: { text: 'Age (years)' }, gridcolor: t.grid, zeroline: false, linecolor: t.axis, range: [0, 85] },
+        yaxis: { title: { text: 'Passengers' }, gridcolor: t.grid, zeroline: false, linecolor: t.axis } }), CFG);
+    }
+
+    // chart 3: fare vs age scatter by class + correlation readout
+    setEmpty('c3', known.length === 0);
+    const corr = $('corr'); corr.textContent = '';
+    if (known.length) {
+      const traces = [];
+      for (const c of [1, 2, 3]) {
+        const g = known.filter(r => r.cls === c);
+        if (!g.length) continue;
+        traces.push({ type: 'scatter', mode: 'markers', name: CLS_NAME[c], x: g.map(r => r.age), y: g.map(r => r.fare),
+          marker: { color: t.cls[c], size: 8, opacity: 0.8, line: { color: t.surface, width: 1 } },
+          customdata: g.map(r => [r.name, r.surv ? 'survived' : 'died']),
+          hovertemplate: '<b>%{customdata[0]}</b><br>age %{x}, fare £%{y:.0f}, %{customdata[1]}<extra></extra>' });
+      }
+      Plotly.react('p3', traces, baseLayout(t, {
+        xaxis: { title: { text: 'Age (years)' }, gridcolor: t.grid, zeroline: false, linecolor: t.axis, range: [-2, 85] },
+        yaxis: { title: { text: 'Fare (£)' }, gridcolor: t.grid, zeroline: false, linecolor: t.axis } }), CFG);
+      const add = (label, r, color) => {
+        const s = document.createElement('span');
+        if (color) { const sw = document.createElement('i'); sw.className = 'sw'; sw.style.background = color; s.appendChild(sw); }
+        s.appendChild(document.createTextNode(label + ' r = '));
+        const b = document.createElement('b'); b.textContent = fmtR(r); s.appendChild(b);
+        corr.appendChild(s);
+      };
+      add('Everyone shown', pearson(known.map(r => r.age), known.map(r => r.fare)), null);
+      for (const c of [1, 2, 3]) {
+        const g = known.filter(r => r.cls === c);
+        if (g.length) add(CLS_NAME[c], pearson(g.map(r => r.age), g.map(r => r.fare)), t.cls[c]);
+      }
+    }
+
+    // chart 4: fare by class, box
+    setEmpty('c4', n === 0);
+    if (n) {
+      const traces = [];
+      for (const c of [1, 2, 3]) {
+        const g = rows.filter(r => r.cls === c);
+        if (!g.length) continue;
+        traces.push({ type: 'box', name: CLS_NAME[c], y: g.map(r => r.fare), marker: { color: t.cls[c], size: 5, opacity: 0.6 },
+          line: { color: t.cls[c], width: 2 }, fillcolor: 'rgba(0,0,0,0)', boxpoints: 'outliers', hoverinfo: 'y+name' });
+      }
+      $('c4-note').textContent = 'Box is the middle half of fares; the line inside is the median. Dots are outliers.';
+      Plotly.react('p4', traces, baseLayout(t, { showlegend: false,
+        xaxis: { gridcolor: 'rgba(0,0,0,0)', linecolor: t.axis, tickfont: { color: t.ink } },
+        yaxis: { title: { text: 'Fare (£)' }, gridcolor: t.grid, zeroline: false, linecolor: t.axis } }), CFG);
+    }
+
+    // table
+    const LIMIT = 100;
+    $('tbl-sum').textContent = n > LIMIT ? 'Show the rows behind these charts (first ' + LIMIT + ' of ' + fmtN(n) + ')' : 'Show the rows behind these charts (' + fmtN(n) + ')';
+    const cols = [['id', 'Id', 1], ['surv', 'Survived', 1], ['cls', 'Class', 1], ['name', 'Name', 0], ['sex', 'Sex', 0], ['age', 'Age', 1], ['sib', 'SibSp', 1], ['par', 'Parch', 1], ['fare', 'Fare', 1], ['emb', 'Embarked', 0]];
+    const thead = $('tbl').tHead, tbody = $('tbl').tBodies[0];
+    thead.textContent = ''; tbody.textContent = '';
+    const hr = document.createElement('tr');
+    for (const [, h, num] of cols) { const th = document.createElement('th'); th.textContent = h; if (num) th.className = 'num'; hr.appendChild(th); }
+    thead.appendChild(hr);
+    for (const r of rows.slice(0, LIMIT)) {
+      const tr = document.createElement('tr');
+      for (const [k, , num] of cols) {
+        const td = document.createElement('td'); let v = r[k];
+        if (v == null) v = ''; else if (k === 'fare') v = v.toFixed(2);
+        td.textContent = v; if (num) td.className = 'num'; tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    }
+    writeHash();
+  }
+
+  // ---------- wiring ----------
+  document.querySelectorAll('.chip[data-class]').forEach(b => b.addEventListener('click', () => {
+    const c = +b.dataset.class; if (state.cls.has(c)) state.cls.delete(c); else state.cls.add(c); syncControls(); render();
+  }));
+  $('sex').addEventListener('change', e => { state.sex = e.target.value; render(); });
+  $('emb').addEventListener('change', e => { state.emb = e.target.value; render(); });
+  $('amin').addEventListener('input', e => { state.amin = +e.target.value; if (state.amax < state.amin) state.amax = state.amin; syncControls(); render(); });
+  $('amax').addEventListener('input', e => { state.amax = +e.target.value; if (state.amin > state.amax) state.amin = state.amax; syncControls(); render(); });
+  $('unk').addEventListener('change', e => { state.unk = e.target.checked; render(); });
+  $('reset').addEventListener('click', () => { Object.assign(state, DEFAULTS()); syncControls(); render(); });
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', render);
+  window.addEventListener('hashchange', () => { Object.assign(state, DEFAULTS()); readHash(); syncControls(); render(); });
+
+  readHash(); syncControls(); render();
+})();
+</script>
+</body>
+</html>

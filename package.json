@@ -1,0 +1,13 @@
+{
+  "name": "csc381-site",
+  "private": true,
+  "description": "CSC 381/576 interactive modules, a static site on Cloudflare Workers (assets only)",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "data": "python build_data.py"
+  },
+  "devDependencies": {
+    "wrangler": "^4"
+  }
+}
