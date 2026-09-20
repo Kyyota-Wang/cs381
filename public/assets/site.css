@@ -84,3 +84,83 @@ h1 { font-size: 28px; margin: 0 0 4px; }
 .module .tag { position: absolute; top: 14px; right: 14px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
   padding: 3px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--ink-2); }
 .module.live .tag { background: var(--gold); color: #1a1a19; border-color: transparent; }
+
+/* ---------------------------------------------------------------- home page */
+.wrap.narrow { max-width: 900px; }
+.hero { padding: 10px 0 6px; }
+.hero h1 { font-size: 34px; margin: 0 0 6px; letter-spacing: -0.01em; }
+.hero .tag { color: var(--ink-2); font-size: 15px; margin: 0; max-width: 70ch; }
+.hero .tag b { color: var(--ink); font-weight: 600; }
+.section { margin-top: 34px; }
+.section > h2 {
+  font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2);
+  margin: 0 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border);
+}
+.topbar nav { display: flex; gap: 18px; align-items: center; }
+
+/* one row that is a link: used for the paper teaser on the home page */
+.rowlink { display: block; text-decoration: none; color: inherit; }
+.rowlink:hover { border-color: var(--brand-2); box-shadow: 0 2px 10px rgba(0,0,0,.08); }
+.rowlink h3 { font-size: 18px; margin: 0 0 6px; line-height: 1.3; }
+.rowlink .meta { font-size: 13px; color: var(--muted); margin: 0 0 8px; }
+.rowlink p { margin: 0; color: var(--ink-2); font-size: 14px; }
+.rowlink .more { display: inline-block; margin-top: 10px; font-size: 13px; color: var(--brand-2); font-weight: 600; }
+:root[data-theme="dark"] .rowlink .more { color: var(--gold); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .rowlink .more { color: var(--gold); } }
+
+/* ---------------------------------------------------------------- research */
+.paper { margin-bottom: 20px; }
+.paper h2 { font-size: 22px; line-height: 1.25; margin: 0 0 8px; }
+.paper .authors { font-size: 15px; margin: 0 0 2px; }
+.paper .venue { font-size: 13.5px; color: var(--muted); margin: 0 0 14px; }
+.badge {
+  display: inline-block; font-size: 11px; letter-spacing: .05em; text-transform: uppercase;
+  font-weight: 700; padding: 3px 8px; border-radius: 999px; background: var(--gold); color: #1a1a19;
+  vertical-align: 2px; margin-left: 8px;
+}
+.paper h3 {
+  font-size: 12px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-2);
+  margin: 22px 0 8px;
+}
+.paper p { font-size: 14.5px; line-height: 1.6; margin: 0 0 12px; }
+.paper ul { font-size: 14.5px; line-height: 1.6; margin: 0 0 12px; padding-left: 20px; }
+.paper li { margin-bottom: 7px; }
+.btns { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0 4px; }
+.btn {
+  display: inline-flex; align-items: center; gap: 7px; text-decoration: none;
+  font-size: 14px; font-weight: 600; padding: 9px 16px; border-radius: 8px;
+  background: var(--brand); color: #fff; border: 1px solid transparent;
+}
+.btn:hover { background: var(--brand-2); }
+.btn.ghost { background: transparent; color: var(--ink); border-color: var(--border); }
+.btn.ghost:hover { background: transparent; border-color: var(--brand-2); }
+:root[data-theme="dark"] .btn { background: var(--brand-2); color: #fff; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .btn { background: var(--brand-2); color: #fff; } }
+
+.tablewrap { overflow-x: auto; margin: 0 0 8px; }
+table.data { border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; min-width: 560px; }
+table.data th, table.data td { padding: 7px 14px 7px 0; border-bottom: 1px solid var(--grid); text-align: right; white-space: nowrap; }
+table.data th:first-child, table.data td:first-child { text-align: left; padding-right: 26px; }
+table.data thead th { color: var(--ink-2); font-weight: 600; border-bottom: 2px solid var(--axis); }
+table.data tr.best td { font-weight: 700; }
+table.data tr.best td:first-child { color: var(--brand-2); }
+:root[data-theme="dark"] table.data tr.best td:first-child { color: var(--gold); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) table.data tr.best td:first-child { color: var(--gold); } }
+.caption { font-size: 12.5px; color: var(--muted); line-height: 1.55; margin: 6px 0 0; }
+
+pre.bib {
+  background: #241635; color: #e8e0f5; border-radius: 10px; padding: 14px 16px; overflow-x: auto;
+  font-size: 12.5px; line-height: 1.5; font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  margin: 0;
+}
+.bibwrap { position: relative; }
+.copy {
+  position: absolute; top: 10px; right: 10px; font: inherit; font-size: 12px; font-weight: 600;
+  padding: 4px 10px; border-radius: 6px; cursor: pointer;
+  background: rgba(255,255,255,.12); color: #e8e0f5; border: 1px solid rgba(255,255,255,.22);
+}
+.copy:hover { background: rgba(255,255,255,.22); }
+.note {
+  border-left: 3px solid var(--gold); padding: 2px 0 2px 14px; margin: 16px 0;
+  font-size: 14px; color: var(--ink-2); line-height: 1.6;
+}

@@ -1,11 +1,21 @@
-"""Regenerate public/visualization/data.js from the Week 3 Titanic CSV.
-Run with Miniconda's python (see HANDOFF.md section 1)."""
-import json, pathlib
+"""Regenerate public/visualization/data.js from data/titanic_raw.csv.
+
+Run with Miniconda's python — the python on PATH on this machine cannot import
+pandas:
+
+    C:/Users/kangc/Miniconda3/python.exe build_data.py
+
+The CSV lives in this folder on purpose, so the site can be rebuilt without the
+course repository being present.
+"""
+import json
+import pathlib
+
 import pandas as pd
 
-ROOT = pathlib.Path(__file__).resolve().parents[2]
-SRC = ROOT / "Lectures/Week03/wk_3_code/data/titanic_raw.csv"
-OUT = pathlib.Path(__file__).parent / "public/visualization/data.js"
+HERE = pathlib.Path(__file__).resolve().parent
+SRC = HERE / "data" / "titanic_raw.csv"
+OUT = HERE / "public" / "visualization" / "data.js"
 
 t = pd.read_csv(SRC)
 cols = ["PassengerId", "Survived", "Pclass", "Name", "Sex", "Age", "SibSp", "Parch", "Fare", "Embarked"]
