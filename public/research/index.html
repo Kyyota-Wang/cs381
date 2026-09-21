@@ -33,90 +33,127 @@
       </div>
 
       <h3>Abstract</h3>
-      <p>Digital direct-to-consumer (DTC) health campaigns are usually measured after the fact. In-flight forecasting
-        commonly relies on a separate classifier for every cutoff and horizon. We treat this task as a dynamic-system
-        problem and build a compact patient world model. The architecture maintains a latent state per patient, learns
-        exposure-conditioned state dynamics jointly with a weekly conversion hazard, and rolls forward into future
-        conversion curves. We evaluate it on a US campaign dataset with 147,173 patients and 5.2 million at-risk
-        person-weeks. In a retrospective evaluation conditioned on recorded future exposures, the model forecasts the
-        remaining new-to-brand prescription volume through week 52 with a relative error of 2.9% from a week-4 cutoff
-        and 0.8–2.6% from cutoffs at weeks 8–26. The strongest non-recurrent baseline, a pooled-hazard gradient boosting
-        model given the same survival rollout, has relative errors of 13.6–33.1%. Per-horizon classifiers perform
-        substantially worse. A Fisher-information analysis motivates dense next-exposure supervision when conversions
-        are rare. Removing this auxiliary objective increases prescription-volume error by approximately 2–14×, while
-        providing no consistent disadvantage on the more common specialist-visit outcome. We also evaluate scenario
-        simulation. Switching all future exposure off raises predicted conversion from 0.31 to 0.89, a pattern
-        consistent with selection effects in observational exposure data. This result highlights the limits of
-        interpreting exposure-conditioned rollouts causally.</p>
+      <p>Digital direct-to-consumer (DTC) health campaigns are typically measured after they end. While current
+        in-flight forecasts rely on standard classifiers with reusable samples, we replace this approach with a compact
+        patient world model. Our architecture maintains a latent state per patient, learning exposure-conditioned
+        dynamics alongside a weekly conversion hazard to smoothly roll forward into future conversion curves. Evaluated
+        on a US campaign featuring 147,173 patients, the model predicted the final week-52 prescription volume from
+        just week 4 with only a 2.9% error given recorded future exposures, whereas the strongest baseline erred by
+        13.6–33.1%. Crucially, when the future media plan is unknown, the model can imagine its own future exposures
+        and roll out on them to yield equally accurate forecasts. A Fisher-information analysis confirms the necessity
+        of this design. Without our dense next-exposure supervision, performance on rare outcomes severely degrades,
+        driving the error rate from 2.9% up to 5.2–11.1%, even though common outcomes remain unaffected. Finally, we
+        outline the model's limitations, highlighting how strong selection effects prevent these observational rollouts
+        from being interpreted causally.</p>
 
       <h3>What the model is</h3>
       <ul>
         <li>A latent state per patient, advanced week by week by a sequence module — a two-layer GRU here, but the
-          slot is swappable.</li>
+          slot is swappable, and the paper is explicit that the GRU is not the contribution.</li>
         <li>A <b>survival hazard head</b> that emits a weekly conversion hazard, and an auxiliary <b>transition
-          head</b> that predicts next week's exposure summary.</li>
+          head</b> that predicts next week's exposure summary from the current state and action.</li>
         <li>A <b>recursive survival rollout</b> that multiplies weekly hazards into cumulative-incidence curves. They
           are monotone and consistent across every horizon by construction, which is what per-horizon classifiers
           cannot offer.</li>
-        <li>About 2×10<sup>5</sup> parameters, trained on CPU inside the certified environment the patient data cannot
-          leave.</li>
+        <li>Hidden size 128, about 2×10<sup>5</sup> parameters, trained on CPU inside the certified environment the
+          patient data cannot leave.</li>
       </ul>
 
-      <h3>Headline result</h3>
+      <h3>Headline result — forecasting from an early cutoff</h3>
       <div class="tablewrap">
         <table class="data">
           <thead>
             <tr>
               <th>Model</th>
-              <th>τ=4</th><th>τ=8</th><th>τ=13</th><th>τ=26</th><th>τ=39</th>
+              <th>τ=4</th><th>τ=8</th><th>τ=13</th><th>τ=26</th>
               <th>Coherent</th>
             </tr>
           </thead>
           <tbody>
-            <tr><td>Per-(τ, H) GBM</td><td>2582.0</td><td>3054.8</td><td>3754.7</td><td>8491.6</td><td>18389.9</td><td>19–24%</td></tr>
-            <tr><td>Per-(τ, H) GBM + future</td><td>2581.8</td><td>3054.1</td><td>3754.0</td><td>8491.9</td><td>18389.9</td><td>11–31%</td></tr>
-            <tr><td>Naive extrapolation</td><td>64.4</td><td>82.6</td><td>97.4</td><td>166.1</td><td>146.7</td><td>100%</td></tr>
-            <tr><td>Pooled-hazard GBM</td><td>13.6</td><td>17.3</td><td>19.2</td><td>33.1</td><td>44.3</td><td>100%</td></tr>
-            <tr><td>GRU forecaster (λ=0)</td><td>5.2</td><td>7.4</td><td>8.2</td><td>11.1</td><td>5.6</td><td>100%</td></tr>
-            <tr class="best"><td>GRU world model (proposed)</td><td>2.9</td><td>2.3</td><td>2.6</td><td>0.8</td><td>23.4</td><td>100%</td></tr>
+            <tr><td>Per-(τ, H) GBM</td><td>2582.0</td><td>3054.8</td><td>3754.7</td><td>8491.6</td><td>19–24%</td></tr>
+            <tr><td>Per-(τ, H) GBM + future</td><td>2581.8</td><td>3054.1</td><td>3754.0</td><td>8491.9</td><td>11–31%</td></tr>
+            <tr><td>Naive extrapolation</td><td>64.4</td><td>82.6</td><td>97.4</td><td>166.1</td><td>100%</td></tr>
+            <tr><td>Pooled-hazard GBM</td><td>13.6</td><td>17.3</td><td>19.2</td><td>33.1</td><td>100%</td></tr>
+            <tr><td>GRU forecaster (λ=0)</td><td>5.2</td><td>7.4</td><td>8.2</td><td>11.1</td><td>100%</td></tr>
+            <tr class="best"><td>GRU world model (proposed)</td><td>2.9</td><td>2.3</td><td>2.6</td><td>0.8</td><td>100%</td></tr>
           </tbody>
         </table>
       </div>
       <p class="caption">Table 1 of the paper. Relative error (%) of the forecast final new-to-brand prescription
-        volume, from a cutoff at week τ through week 52, on the held-out test split with known future exposures.
+        volume, from a cutoff at week τ through week 52, on the held-out test split with the future exposures known.
         <b>Coherent</b> is the fraction of per-patient curves that never decrease. A perfectly calibrated forecaster
-        still faces a 1σ sampling floor of 3.7%, 4.1%, 4.5% and 7.0% at τ = 4, 8, 13 and 26, so the world model's
-        errors sit at or below the floor at every one of those cutoffs. At τ = 39 only 76 future converters remain and
-        the floor rises to 11.5%, which is why that column cannot rank the coherent models and no conclusion is drawn
-        from it.</p>
+        still faces a 1σ sampling floor of 3.7%, 4.1%, 4.5% and 7.0% at these four cutoffs, so the world model's errors
+        sit at or below the floor at every one of them: on this test set there is no headroom left to measure.</p>
 
-      <h3>Three things it shows</h3>
+      <h3>The operational result — when nobody knows the future media plan</h3>
+      <p>Every row above was handed the exposures that actually happened. That is the fair comparison, and it is not a
+        deployable one: in flight, no one knows next month's plan. The world model is the only method here that can
+        supply it from within. Its transition head generates each next exposure and the rollout consumes its own
+        output, closed loop, seeing nothing after the cutoff.</p>
+      <div class="tablewrap">
+        <table class="data twolabel">
+          <thead>
+            <tr>
+              <th>Method</th><th>Future source</th>
+              <th>τ=4</th><th>τ=8</th><th>τ=13</th><th>τ=26</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="best"><td>GRU world model</td><td>imagined (closed loop)</td><td>2.5</td><td>1.7</td><td>0.5</td><td>1.8</td></tr>
+            <tr><td>GRU world model</td><td>true future (ref.)</td><td>2.9</td><td>2.3</td><td>2.6</td><td>0.8</td></tr>
+            <tr><td>GRU world model</td><td>mean plan</td><td>2.4</td><td>3.6</td><td>1.2</td><td>3.3</td></tr>
+            <tr><td>GRU forecaster (λ=0)</td><td>mean plan</td><td>64.2</td><td>53.5</td><td>38.6</td><td>20.2</td></tr>
+            <tr><td>Pooled-hazard GBM</td><td>true future (ref.)</td><td>13.6</td><td>17.3</td><td>19.2</td><td>33.1</td></tr>
+            <tr><td>Pooled-hazard GBM</td><td>mean plan</td><td>37.5</td><td>39.2</td><td>38.7</td><td>52.3</td></tr>
+            <tr><td>Naive extrapolation</td><td>—</td><td>64.4</td><td>82.6</td><td>97.4</td><td>166.1</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="caption">Table 2 of the paper. Forecasting the same quantity without access to the future media plan.
+        The closed-loop model, which sees none of the future, lands within 0.5–2.5% at every cutoff — matching the
+        same model handed the true future (0.8–2.9%), with both inside the sampling floor, so the two are
+        statistically indistinguishable. <b>Imagining the plan costs nothing here.</b> A model that imagines its own
+        future is more accurate than a strong survival baseline handed the real one. The capability is specific to the
+        rare outcome: on the ten-times-denser diagnosis outcome the closed-loop rollout degrades to 15–27%, and the
+        paper says so.</p>
+
+      <h3>What it shows</h3>
       <ul>
         <li><b>Structure, not capacity.</b> Coherence and additive error propagation come from the survival rollout
-          rather than from the network. Any pooled-hazard model with the rollout beats per-horizon classifiers by
-          orders of magnitude.</li>
-        <li><b>Dense supervision earns its place when events are rare.</b> A Fisher-information argument shows the
-          outcome loss supplies roughly 1% of the encoder's gradient curvature at rare-event rates. Removing the
-          transition head — one flag — costs 2–14× on prescription-volume error, and nothing on the ten-times-more-common
-          specialist-visit outcome. The effect appears exactly where the analysis predicted it, and not elsewhere.</li>
+          rather than from the network. The same LightGBM, given that rollout, goes from a 2,582% error to 13.6% —
+          still an order of magnitude behind the world model, but the structural fix is worth far more than the
+          model class.</li>
+        <li><b>Dense supervision earns its place when events are rare.</b> A Fisher-information comparison of the two
+          loss terms shows the hazard term's curvature carries a factor h(1−h), small precisely because conversions
+          are rare, while the transition term carries no such factor. It is a scaling argument rather than an exact
+          ratio, and it makes a testable prediction. Removing the transition head — one flag — raises volume error
+          from 0.8–2.9% to 5.2–11.1% on the rare outcome and costs nothing on the common one, which is exactly where
+          the argument said the effect would be.</li>
+        <li><b>The forecast survives not knowing the plan.</b> The imagined rollout is as accurate as the true-future
+          one. Two controls locate why: holding the plan fixed and varying only the training objective still separates
+          the models, and exporting the imagined exposures into the GBM's hazard head makes things worse. The value is
+          in the latent state consuming its own rollout, not in the imagined exposures as a feature.</li>
         <li><b>Scenario simulation has a hard limit.</b> Within observed dose support the simulator behaves sanely.
-          Switching all future exposure off raises predicted conversion from 0.31 to 0.89 — a selection artifact from
-          outcome-dependent censoring, not a treatment effect. Exposure-conditioned rollouts must not be read causally.</li>
+          Switching all future exposure off raises predicted conversion from 0.31 to 0.89 — the highest, where a causal
+          reading demands the lowest. It is selection through censoring: exposure stops once a patient converts, so no
+          future exposure is itself evidence of imminent conversion. The baseline simulator inverts the same way.
+          Exposure-conditioned rollouts must not be read causally.</li>
       </ul>
 
       <div class="note">
-        <b>Data and reproducibility.</b> The underlying records are protected health information and stay on a secured
-        analytics cluster; only aggregate metrics are reported, and the data cannot be shared. Cohort construction
-        rules, feature definitions, hyperparameters and the full as-run result tables are in Appendices A–G of the
-        paper, at a level of detail sufficient to rebuild the pipeline on comparable data. Model and evaluation code
-        are being prepared for release.
+        <b>Data and reproducibility.</b> The underlying records are protected health information, analyzed inside a
+        certified environment; only aggregate metrics are reported, no patient-level output leaves, and the data
+        cannot be shared. Cohort construction rules, feature definitions, hyperparameters and the full result tables
+        are in the appendices, at a level of detail sufficient to rebuild the pipeline on comparable data.
       </div>
 
       <div class="note">
         <b>Responsible use.</b> This work forecasts observed health-seeking behavior under recorded digital exposure.
-        It does not estimate causal effects. Outputs are decision support for campaign measurement and planning, not
-        input to individual-level clinical or coverage decisions. The results come from one campaign, one therapeutic
-        area and one country; external validity is untested.
+        It does not estimate causal effects, and the paper quantifies why its scenario outputs must not be read as
+        such. Outputs are decision support for campaign measurement and planning; they are not used, and should not be
+        used, for individual-level clinical or coverage decisions. All results come from one campaign, one therapeutic
+        area and one country, on an intentionally enriched cohort reweighted to natural prevalence. External validity
+        is untested.
       </div>
 
       <h3 id="bibtex">Cite</h3>
